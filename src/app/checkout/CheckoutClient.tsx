@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useRef, useState } from 'react';
 import Script from 'next/script';
 import { useRouter } from 'next/navigation';
 import { Icons } from '@/components/icons';
@@ -56,19 +56,17 @@ export function CheckoutClient({
     () => addresses.find((a) => a.isDefault)?.id ?? addresses[0]?.id ?? '',
   );
   const [provider, setProvider] = useState<Provider>('RAZORPAY');
-  // One idempotency key per checkout-intent. Stable across button clicks AND across providers
-  // — if the user starts Razorpay, dismisses, switches to Stripe, the same Order is reused.
-  const idempotencyKey = useMemo(
-    () => (typeof crypto !== 'undefined' ? crypto.randomUUID() : Date.now().toString()),
-    [],
-  );
-
+  const idempotencyKeyRef = useRef<string | null>(null);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeSelectedId = selectedId || addresses[0]?.id || '';
 
-  useEffect(() => {
-    if (!selectedId && addresses[0]) setSelectedId(addresses[0].id);
-  }, [addresses, selectedId]);
+  function getIdempotencyKey() {
+    if (!idempotencyKeyRef.current) {
+      idempotencyKeyRef.current = crypto.randomUUID();
+    }
+    return idempotencyKeyRef.current;
+  }
 
   async function payWithRazorpay() {
     if (!window.Razorpay) {
@@ -78,8 +76,8 @@ export function CheckoutClient({
     }
 
     const session = await startRazorpayCheckoutAction({
-      addressId: selectedId,
-      idempotencyKey,
+      addressId: activeSelectedId,
+      idempotencyKey: getIdempotencyKey(),
     });
 
     const rzp = new window.Razorpay({
@@ -114,8 +112,8 @@ export function CheckoutClient({
 
   async function payWithStripe() {
     const session = await startStripeCheckoutAction({
-      addressId: selectedId,
-      idempotencyKey,
+      addressId: activeSelectedId,
+      idempotencyKey: getIdempotencyKey(),
     });
     // Hand off to Stripe's hosted checkout. They redirect back to success_url.
     window.location.href = session.url;
@@ -123,7 +121,7 @@ export function CheckoutClient({
 
   async function onPay() {
     setError(null);
-    if (!selectedId) {
+    if (!activeSelectedId) {
       setError('Pick a delivery address first.');
       return;
     }
@@ -176,15 +174,15 @@ export function CheckoutClient({
                 style={{
                   display: 'flex', gap: 14, alignItems: 'flex-start',
                   padding: 14, borderRadius: 'var(--r-md)',
-                  border: selectedId === a.id ? '1.5px solid var(--ink)' : '1px solid var(--line)',
-                  background: selectedId === a.id ? 'var(--paper-2)' : 'var(--paper)',
+                  border: activeSelectedId === a.id ? '1.5px solid var(--ink)' : '1px solid var(--line)',
+                  background: activeSelectedId === a.id ? 'var(--paper-2)' : 'var(--paper)',
                   cursor: 'pointer',
                 }}
               >
                 <input
                   type="radio"
                   name="address"
-                  checked={selectedId === a.id}
+                  checked={activeSelectedId === a.id}
                   onChange={() => setSelectedId(a.id)}
                   style={{ marginTop: 2, accentColor: 'var(--ink)' }}
                 />

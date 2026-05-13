@@ -7,7 +7,6 @@ import { Wordmark } from '@/components/wordmark';
 import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export default function ResetPasswordPage() {
-  const supabase = createSupabaseBrowserClient();
   const router = useRouter();
 
   const [password, setPassword] = useState('');
@@ -29,6 +28,7 @@ export default function ResetPasswordPage() {
       return;
     }
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.updateUser({ password });
       if (error) {
         setError(error.message);

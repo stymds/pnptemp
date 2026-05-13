@@ -53,7 +53,6 @@ export function PLPClient({
   // Force grid view on mobile
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 640px)');
-    if (mq.matches) setView('grid');
     const handler = (e: MediaQueryListEvent) => { if (e.matches) setView('grid'); };
     mq.addEventListener('change', handler);
     return () => mq.removeEventListener('change', handler);

@@ -13,7 +13,6 @@ const HERO_ALT = 'Canon EOS R5 Mark II camera body, front view';
 type Mode = 'otp' | 'password' | 'signup';
 
 export default function LoginPage() {
-  const supabase = createSupabaseBrowserClient();
   const router = useRouter();
   const searchParams = useSearchParams();
   const initialError = searchParams.get('error');
@@ -50,6 +49,7 @@ export default function LoginPage() {
 
   async function signInWithGoogle() {
     clearMessages();
+    const supabase = createSupabaseBrowserClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
       options: { redirectTo: `${window.location.origin}/auth/callback` },
@@ -61,6 +61,7 @@ export default function LoginPage() {
     e.preventDefault();
     clearMessages();
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) setError(error.message);
       else onAfterAuth();
@@ -74,6 +75,7 @@ export default function LoginPage() {
       return;
     }
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
@@ -90,6 +92,7 @@ export default function LoginPage() {
       return;
     }
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
       });
@@ -102,6 +105,7 @@ export default function LoginPage() {
     e.preventDefault();
     clearMessages();
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -133,6 +137,7 @@ export default function LoginPage() {
     clearMessages();
     const e164 = normalizePhone(phone);
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.signInWithOtp({ phone: e164 });
       if (error) {
         setError(error.message);
@@ -148,6 +153,7 @@ export default function LoginPage() {
     clearMessages();
     const e164 = normalizePhone(phone);
     startTransition(async () => {
+      const supabase = createSupabaseBrowserClient();
       const { error } = await supabase.auth.verifyOtp({ phone: e164, token: otp, type: 'sms' });
       if (error) setError(error.message);
       else onAfterAuth();

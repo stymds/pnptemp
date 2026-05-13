@@ -3,7 +3,6 @@ import Link from 'next/link';
 import { Footer } from '@/components/footer';
 import { NavWithCount } from '@/components/nav-with-count';
 import { ProductCard } from '@/components/product-card';
-import { Icons } from '@/components/icons';
 import { getProductBySlug, getRelatedProducts } from '@/lib/products';
 import { getWishedSlugs } from '@/lib/wishlist';
 import { getCurrentUser } from '@/lib/auth';
