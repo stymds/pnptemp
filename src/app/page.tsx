@@ -193,7 +193,7 @@ export default async function HomePage() {
               style={{
                 background: 'var(--paper-2)',
                 color: 'var(--ink)',
-                padding: '32px 24px',
+                padding: 'clamp(16px, 3vw, 32px) clamp(14px, 2.5vw, 24px)',
                 borderRadius: 'var(--r-lg)',
                 aspectRatio: '3/4',
                 display: 'flex',
@@ -204,16 +204,16 @@ export default async function HomePage() {
                 transition: 'transform .25s',
               }}
             >
-              <div>
+              <div style={{ flexShrink: 0 }}>
                 <div className="mono" style={{ fontSize: 10, letterSpacing: '0.12em', opacity: 0.5, textTransform: 'uppercase' }}>
                   {String(c.count).padStart(2, '0')} products
                 </div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 32, marginTop: 8, letterSpacing: '-0.02em' }}>{c.name}</div>
+                <div style={{ fontFamily: 'var(--serif)', fontSize: 'clamp(18px, 3.5vw, 32px)', marginTop: 6, letterSpacing: '-0.02em', lineHeight: 1.1 }}>{c.name}</div>
               </div>
-              <div style={{ width: '100%', height: 200, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {c.product && <ProductImage src={c.product.image} alt={c.product.imageAlt} sizes="25vw" />}
+              <div style={{ position: 'relative', width: '100%', flex: 1, minHeight: 0, margin: '12px 0' }}>
+                {c.product && <ProductImage src={c.product.image} alt={c.product.imageAlt} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 50vw, 25vw" />}
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
+              <div style={{ flexShrink: 0, display: 'flex', alignItems: 'center', gap: 6, fontSize: 12 }}>
                 Shop now {Icons.arrowR}
               </div>
             </Link>

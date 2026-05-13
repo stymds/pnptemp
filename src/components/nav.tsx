@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { createSupabaseBrowserClient } from '@/lib/supabase/client';
 import { Icons } from './icons';
 import { Wordmark } from './wordmark';
 
@@ -61,6 +63,7 @@ function TopStrip() {
 interface NavProps {
   cartCount?: number;
   compact?: boolean;
+  isLoggedIn?: boolean;
 }
 
 export function Nav({ cartCount = 2, compact = false }: NavProps) {
@@ -146,11 +149,11 @@ export function Nav({ cartCount = 2, compact = false }: NavProps) {
   );
 }
 
-export function SiteNav({ cartCount = 2, compact = false }: NavProps) {
+export function SiteNav({ cartCount = 2, compact = false, isLoggedIn = false }: NavProps) {
   return (
     <>
       <div className="sitenav-desktop"><Nav cartCount={cartCount} compact={compact} /></div>
-      <div className="sitenav-mobile"><MobileNav cartCount={cartCount} /></div>
+      <div className="sitenav-mobile"><MobileNav cartCount={cartCount} isLoggedIn={isLoggedIn} /></div>
     </>
   );
 }
@@ -171,8 +174,17 @@ const MOBILE_DRAWER_ACCOUNT: Array<{ label: string; href: string }> = [
   { label: 'Addresses', href: '/account/addresses' },
 ];
 
-export function MobileNav({ cartCount = 2 }: { cartCount?: number }) {
+export function MobileNav({ cartCount = 2, isLoggedIn = false }: { cartCount?: number; isLoggedIn?: boolean }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  async function signOut() {
+    const supabase = createSupabaseBrowserClient();
+    await supabase.auth.signOut();
+    setOpen(false);
+    router.refresh();
+    router.push('/');
+  }
 
   // Close on Escape + lock body scroll while drawer is open.
   useEffect(() => {
@@ -317,13 +329,23 @@ export function MobileNav({ cartCount = 2 }: { cartCount?: number }) {
           >
             View cart{cartCount > 0 ? ` (${cartCount})` : ''}
           </Link>
-          <Link
-            href="/login"
-            onClick={() => setOpen(false)}
-            className="btn btn-ghost btn-sm"
-          >
-            Sign in
-          </Link>
+          {isLoggedIn ? (
+            <button
+              type="button"
+              onClick={signOut}
+              className="btn btn-ghost btn-sm"
+            >
+              Sign out
+            </button>
+          ) : (
+            <Link
+              href="/login"
+              onClick={() => setOpen(false)}
+              className="btn btn-ghost btn-sm"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
       </aside>
     </>
