@@ -9,13 +9,13 @@ export function Footer() {
     { t: 'PnP', l: ['Our Story', 'Store Locator', 'Careers', 'Press', 'Blog', 'Instagram'] },
   ];
   return (
-    <footer style={{ background: 'var(--ink)', color: 'var(--paper)', padding: '80px 32px 32px' }}>
+    <footer className="pnp-px" style={{ background: 'var(--ink)', color: 'var(--paper)', paddingTop: 80, paddingBottom: 32 }}>
       <div style={{ maxWidth: 1400, margin: '0 auto' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 2.5fr', gap: 60, marginBottom: 80 }}>
+        <div className="split-2" style={{ marginBottom: 80, gap: 60 }}>
           <div>
             <div style={{ marginBottom: 24 }}><Wordmark tone="paper" size={24} /></div>
             <p style={{ fontSize: 14, opacity: 0.7, maxWidth: 360, lineHeight: 1.6 }}>
-              India's authorized Canon Image Square since 1998. Cameras, lenses, prints, and the people who know them.
+              India&apos;s authorized Canon Image Square since 1998. Cameras, lenses, prints, and the people who know them.
             </p>
             <div style={{ marginTop: 32 }}>
               <div className="mono" style={{ fontSize: 10, letterSpacing: '0.14em', opacity: 0.5, marginBottom: 10, textTransform: 'uppercase' }}>Newsletter</div>
@@ -28,7 +28,7 @@ export function Footer() {
               </div>
             </div>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 32 }}>
+          <div className="grid-4">
             {cols.map(c => (
               <div key={c.t}>
                 <div className="mono" style={{ fontSize: 10, letterSpacing: '0.14em', opacity: 0.5, marginBottom: 16, textTransform: 'uppercase' }}>{c.t}</div>
@@ -39,10 +39,10 @@ export function Footer() {
             ))}
           </div>
         </div>
-        <div style={{
+        <div className="stack-mobile" style={{
           borderTop: '1px solid rgba(255,255,255,0.1)',
           paddingTop: 24,
-          display: 'flex', justifyContent: 'space-between',
+          justifyContent: 'space-between',
           fontSize: 11, opacity: 0.5,
           fontFamily: 'var(--mono)', textTransform: 'uppercase', letterSpacing: '0.1em',
         }}>

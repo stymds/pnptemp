@@ -1,125 +1,154 @@
-'use client';
-
-import { useState } from 'react';
 import Link from 'next/link';
-import { Nav } from '@/components/nav';
 import { Footer } from '@/components/footer';
-import { CameraArt } from '@/components/camera-art';
+import { ProductImage } from '@/components/product-image';
 import { Icons } from '@/components/icons';
-import { products, formatINR, Product } from '@/lib/data';
+import { NavWithCount } from '@/components/nav-with-count';
+import { formatINR } from '@/lib/data';
+import { getCart } from '@/lib/cart';
+import { getAppliedCoupon } from '@/lib/coupons';
+import { productImageSrc } from '@/lib/storage';
+import { CartItemControls } from './CartItemControls';
+import { CouponBox } from './CouponBox';
 
-interface CartItem extends Product {
-  qty: number;
-  config: string;
-}
+export default async function CartPage() {
+  const cart = await getCart();
+  const items = cart?.items ?? [];
+  const itemCount = items.reduce((s, i) => s + i.qty, 0);
+  const subtotalPaise = items.reduce((s, i) => s + i.priceAtAddPaise * i.qty, 0);
+  const savingsPaise = items.reduce(
+    (s, i) => s + Math.max(0, i.product.mrpPaise - i.priceAtAddPaise) * i.qty,
+    0,
+  );
+  const coupon = await getAppliedCoupon(subtotalPaise);
+  const discountPaise = coupon?.discountPaise ?? 0;
 
-export default function CartPage() {
-  const [items, setItems] = useState<CartItem[]>([
-    { ...products[0], qty: 1, config: 'Body only' },
-    { ...products[7], qty: 1, config: 'Lens only' },
-    { ...products[11], qty: 2, config: 'Standard' },
-  ]);
-
-  const update = (id: string, d: number) => setItems(its => its.map(it => it.id === id ? { ...it, qty: Math.max(1, it.qty + d) } : it));
-  const remove = (id: string) => setItems(its => its.filter(it => it.id !== id));
-  const subtotal = items.reduce((s, i) => s + i.price * i.qty, 0);
-  const savings = items.reduce((s, i) => s + (i.mrp - i.price) * i.qty, 0);
-  const shipping = subtotal > 5000 ? 0 : 299;
-  const total = subtotal + shipping;
+  const subtotal = Math.round(subtotalPaise / 100);
+  const savings = Math.round(savingsPaise / 100);
+  const discount = Math.round(discountPaise / 100);
+  const shipping = subtotal > 5000 || subtotal === 0 ? 0 : 299;
+  const total = subtotal - discount + shipping;
 
   return (
     <div style={{ width: '100%', background: 'var(--paper)' }}>
-      <Nav cartCount={items.length} />
-      <section style={{ padding: '40px 64px 24px' }}>
+      <NavWithCount />
+      <section className="pnp-px" style={{ paddingTop: 40, paddingBottom: 24 }}>
         <div className="mono muted" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 16 }}>
           <Link href="/">Home</Link> / <span style={{ color: 'var(--ink)' }}>Your bag</span>
         </div>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-          <h1 style={{ fontSize: 56, letterSpacing: '-0.03em' }}>Your bag</h1>
-          <div className="mono muted" style={{ fontSize: 11, letterSpacing: '0.1em' }}>{items.length} ITEMS</div>
+        <div className="flex-wrap-mobile" style={{ justifyContent: 'space-between', alignItems: 'baseline' }}>
+          <h1 className="fluid-h1" style={{ letterSpacing: '-0.03em' }}>Your bag</h1>
+          <div className="mono muted" style={{ fontSize: 11, letterSpacing: '0.1em' }}>
+            {itemCount} ITEM{itemCount === 1 ? '' : 'S'}
+          </div>
         </div>
       </section>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 64, padding: '24px 64px 96px' }}>
-        {/* Items */}
-        <div style={{ borderTop: '1px solid var(--ink)' }}>
-          {items.map(it => (
-            <div key={it.id} style={{
-              display: 'grid', gridTemplateColumns: '140px 1fr auto', gap: 24,
-              padding: '28px 0', borderBottom: '1px solid var(--line)',
-            }}>
-              <div style={{ width: 140, height: 140, background: 'var(--paper-2)', borderRadius: 'var(--r-md)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <CameraArt tone="dark" variant={it.category === 'Lenses' ? 'lens' : it.category === 'Flashes' ? 'flash' : 'body'} />
-              </div>
-              <div>
-                <div className="mono muted" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>{it.category}</div>
-                <div style={{ fontFamily: 'var(--serif)', fontSize: 22, marginBottom: 4 }}>{it.name}</div>
-                <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>{it.config} · {it.tagline}</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--ok)', marginBottom: 14 }}>
-                  {Icons.check} In stock · ships in 24h
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', border: '1px solid var(--line)', borderRadius: 999, height: 32 }}>
-                    <button onClick={() => update(it.id, -1)} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Icons.minus}</button>
-                    <span style={{ minWidth: 20, textAlign: 'center', fontSize: 13, fontVariantNumeric: 'tabular-nums' }}>{it.qty}</span>
-                    <button onClick={() => update(it.id, 1)} style={{ width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{Icons.plus}</button>
+      {items.length === 0 ? (
+        <section className="pnp-px" style={{ paddingBottom: 96 }}>
+          <div style={{
+            padding: '80px 24px', textAlign: 'center',
+            background: 'var(--paper-2)', borderRadius: 'var(--r-lg)',
+          }}>
+            <div className="mono" style={{ fontSize: 10, letterSpacing: '0.14em', color: 'var(--ink-3)', marginBottom: 14, textTransform: 'uppercase' }}>
+              Your bag is empty
+            </div>
+            <p className="muted" style={{ fontSize: 14, marginBottom: 24 }}>
+              Browse the catalog and add something to get started.
+            </p>
+            <Link href="/cameras" className="btn btn-primary btn-lg">Shop cameras →</Link>
+          </div>
+        </section>
+      ) : (
+        <div className="split-summary pnp-px" style={{ paddingTop: 24, paddingBottom: 96 }}>
+          {/* Items */}
+          <div style={{ borderTop: '1px solid var(--ink)' }}>
+            {items.map(it => {
+              const img = it.product.images[0];
+              const unitRupees = Math.round(it.priceAtAddPaise / 100);
+              const mrpRupees = Math.round(it.product.mrpPaise / 100);
+              return (
+                <div key={it.id} className="cart-row" style={{
+                  padding: '28px 0', borderBottom: '1px solid var(--line)',
+                }}>
+                  <div style={{ aspectRatio: '1/1', maxWidth: 140, width: '100%', background: 'var(--paper-2)', borderRadius: 'var(--r-md)', overflow: 'hidden' }}>
+                    {img && <ProductImage src={productImageSrc(img.storagePath)} alt={img.alt} sizes="140px" />}
                   </div>
-                  <button style={{ fontSize: 12, color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', paddingBottom: 2 }}>Save for later</button>
-                  <button onClick={() => remove(it.id)} style={{ fontSize: 12, color: 'var(--ink-3)', borderBottom: '1px solid var(--line)', paddingBottom: 2 }}>Remove</button>
+                  <div>
+                    <div className="mono muted" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 6 }}>
+                      {it.product.category.name}
+                    </div>
+                    <Link href={`/cameras/${it.product.slug}`} style={{ fontFamily: 'var(--serif)', fontSize: 22, marginBottom: 4, display: 'block', color: 'var(--ink)' }}>
+                      {it.product.name}
+                    </Link>
+                    {it.product.tagline && (
+                      <div className="muted" style={{ fontSize: 12, marginBottom: 10 }}>{it.product.tagline}</div>
+                    )}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: it.product.stockUnits > 0 ? 'var(--ok)' : 'var(--warn)', marginBottom: 14 }}>
+                      {Icons.check} {it.product.stockUnits > 0 ? 'In stock · ships in 24h' : 'Out of stock'}
+                    </div>
+                    <CartItemControls itemId={it.id} qty={it.qty} />
+                  </div>
+                  <div className="cart-price" style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 18, fontFamily: 'var(--serif)' }}>{formatINR(unitRupees * it.qty)}</div>
+                    {mrpRupees > unitRupees && <div className="strike" style={{ fontSize: 12, marginTop: 4 }}>{formatINR(mrpRupees * it.qty)}</div>}
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ padding: '24px 0', display: 'flex', justifyContent: 'space-between' }}>
+              <Link href="/cameras" className="btn btn-ghost btn-sm">← Continue shopping</Link>
+              <div className="muted" style={{ fontSize: 12 }}>All prices inclusive of 18% GST</div>
+            </div>
+          </div>
+
+          {/* Summary */}
+          <aside className="checkout-summary-sticky" style={{ top: 80 }}>
+            <div style={{ background: 'var(--paper-2)', borderRadius: 'var(--r-lg)', padding: 32 }}>
+              <h3 style={{ fontSize: 22, marginBottom: 20 }}>Order summary</h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20, fontSize: 13 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="muted">Subtotal ({itemCount} item{itemCount === 1 ? '' : 's'})</span>
+                  <span>{formatINR(subtotal)}</span>
+                </div>
+                {savings > 0 && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="muted">You save</span>
+                    <span style={{ color: 'var(--accent)' }}>−{formatINR(savings)}</span>
+                  </div>
+                )}
+                {coupon && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <span className="muted">Coupon ({coupon.code})</span>
+                    <span style={{ color: 'var(--ok)' }}>−{formatINR(discount)}</span>
+                  </div>
+                )}
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="muted">Shipping</span>
+                  <span>{shipping === 0 ? 'Free' : formatINR(shipping)}</span>
                 </div>
               </div>
-              <div style={{ textAlign: 'right' }}>
-                <div style={{ fontSize: 18, fontFamily: 'var(--serif)' }}>{formatINR(it.price * it.qty)}</div>
-                {it.mrp > it.price && <div className="strike" style={{ fontSize: 12, marginTop: 4 }}>{formatINR(it.mrp * it.qty)}</div>}
-              </div>
-            </div>
-          ))}
-          <div style={{ padding: '24px 0', display: 'flex', justifyContent: 'space-between' }}>
-            <Link href="/cameras" className="btn btn-ghost btn-sm">← Continue shopping</Link>
-            <div className="muted" style={{ fontSize: 12 }}>All prices inclusive of 18% GST</div>
-          </div>
-        </div>
 
-        {/* Summary */}
-        <aside style={{ position: 'sticky', top: 80, alignSelf: 'start' }}>
-          <div style={{ background: 'var(--paper-2)', borderRadius: 'var(--r-lg)', padding: 32 }}>
-            <h3 style={{ fontSize: 22, marginBottom: 20 }}>Order summary</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 20, fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="muted">Subtotal ({items.reduce((s, i) => s + i.qty, 0)} items)</span>
-                <span>{formatINR(subtotal)}</span>
+              <div style={{ marginBottom: 20 }}>
+                <CouponBox
+                  appliedCode={coupon?.code ?? null}
+                  appliedDescription={coupon?.description ?? null}
+                  appliedDiscountRupees={discount}
+                />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="muted">You save</span>
-                <span style={{ color: 'var(--accent)' }}>−{formatINR(savings)}</span>
+
+              <hr className="hr" />
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '20px 0' }}>
+                <span style={{ fontSize: 13 }}>Total payable</span>
+                <span style={{ fontSize: 28, fontFamily: 'var(--serif)' }}>{formatINR(total)}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <span className="muted">Shipping</span>
-                <span>{shipping === 0 ? 'Free' : formatINR(shipping)}</span>
+              <Link href="/checkout" className="btn btn-primary btn-lg btn-block" style={{ marginBottom: 10, display: 'flex' }}>Checkout →</Link>
+              <div style={{ fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+                {Icons.shield} Secure checkout · SSL encrypted
               </div>
             </div>
-            <hr className="hr" />
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', margin: '20px 0' }}>
-              <span style={{ fontSize: 13 }}>Total payable</span>
-              <span style={{ fontSize: 28, fontFamily: 'var(--serif)' }}>{formatINR(total)}</span>
-            </div>
-            <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
-              <input className="input" placeholder="Promo code" style={{ flex: 1 }} />
-              <button className="btn btn-ghost btn-sm">Apply</button>
-            </div>
-            <Link href="/checkout" className="btn btn-primary btn-lg btn-block" style={{ marginBottom: 10, display: 'flex' }}>Checkout →</Link>
-            <button className="btn btn-ghost btn-block" style={{ marginBottom: 20 }}>Pay with UPI</button>
-            <div style={{ fontSize: 11, color: 'var(--ink-3)', display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
-              {Icons.shield} Secure checkout · SSL encrypted
-            </div>
-          </div>
-          <div style={{ marginTop: 20, padding: 20, border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
-            <div className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 8 }}>Need help deciding?</div>
-            <div style={{ fontSize: 13, color: 'var(--ink-2)', marginBottom: 10 }}>Talk to a PnP advisor — free 15-min call.</div>
-            <button style={{ fontSize: 12, borderBottom: '1px solid var(--ink)', paddingBottom: 2 }}>Book a call →</button>
-          </div>
-        </aside>
-      </div>
+          </aside>
+        </div>
+      )}
       <Footer />
     </div>
   );

@@ -1,21 +1,47 @@
-'use client';
-
-import { useState } from 'react';
+import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { Wordmark } from '@/components/wordmark';
-import { CameraArt } from '@/components/camera-art';
+import { ProductImage } from '@/components/product-image';
 import { Icons } from '@/components/icons';
-import { products, formatINR } from '@/lib/data';
+import { formatINR } from '@/lib/data';
+import { requireUser } from '@/lib/auth';
+import { getCart } from '@/lib/cart';
+import { getAppliedCoupon } from '@/lib/coupons';
+import { prisma } from '@/lib/db';
+import { productImageSrc } from '@/lib/storage';
+import { CheckoutClient } from './CheckoutClient';
 
-export default function CheckoutPage() {
-  const [step] = useState(2);
-  const [payment, setPayment] = useState('upi');
+export default async function CheckoutPage() {
+  const user = await requireUser();
+
+  const cart = await getCart();
+  const items = cart?.items ?? [];
+  if (items.length === 0) redirect('/cart');
+
+  const addresses = await prisma.address.findMany({
+    where: { userId: user.id, type: 'SHIPPING' },
+    orderBy: [{ isDefault: 'desc' }, { createdAt: 'desc' }],
+  });
+
+  const subtotalPaise = items.reduce((s, i) => s + i.priceAtAddPaise * i.qty, 0);
+  const coupon = await getAppliedCoupon(subtotalPaise);
+  const discountPaise = coupon?.discountPaise ?? 0;
+  const discountedSubtotal = Math.max(0, subtotalPaise - discountPaise);
+  const shippingPaise = discountedSubtotal > 5000_00 || discountedSubtotal === 0 ? 0 : 299_00;
+  const totalPaise = discountedSubtotal + shippingPaise;
+
   const steps = ['Bag', 'Address', 'Payment', 'Review'];
+  const step = 2;
 
   return (
     <div style={{ width: '100%', background: 'var(--paper)', minHeight: '100vh' }}>
-      <header style={{ borderBottom: '1px solid var(--line)', padding: '20px 64px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'var(--paper)' }}>
-        <Wordmark size={18} />
-        <div style={{ display: 'flex', gap: 0, alignItems: 'center' }}>
+      <header className="pnp-px flex-wrap-mobile" style={{
+        borderBottom: '1px solid var(--line)', paddingTop: 20, paddingBottom: 20,
+        justifyContent: 'space-between', alignItems: 'center',
+        background: 'var(--paper)', gap: 16,
+      }}>
+        <Link href="/"><Wordmark size={18} /></Link>
+        <div className="scroll-x-mobile" style={{ display: 'flex', gap: 0, alignItems: 'center' }}>
           {steps.map((s, i) => (
             <div key={s} style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -42,127 +68,78 @@ export default function CheckoutPage() {
         </div>
       </header>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 64, padding: '48px 64px 96px', maxWidth: 1400, margin: '0 auto' }}>
+      <div className="split-checkout pnp-px" style={{ paddingTop: 48, paddingBottom: 96, maxWidth: 1400, margin: '0 auto' }}>
         <div>
-          {/* Address — collapsed */}
-          <div style={{ border: '1px solid var(--line)', borderRadius: 'var(--r-md)', padding: 24, marginBottom: 20 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                <span style={{ width: 20, height: 20, borderRadius: 999, background: 'var(--ok)', color: 'var(--paper)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 5l2 2 4-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                </span>
-                <span className="mono" style={{ fontSize: 11, letterSpacing: '0.1em', textTransform: 'uppercase' }}>Delivery address</span>
-              </div>
-              <button style={{ fontSize: 12, borderBottom: '1px solid var(--ink)', paddingBottom: 2 }}>Change</button>
-            </div>
-            <div style={{ paddingLeft: 30, fontSize: 14, color: 'var(--ink-2)', lineHeight: 1.6 }}>
-              <div style={{ color: 'var(--ink)', fontWeight: 500 }}>Aditi Rao</div>
-              412, Linking Road, Bandra West<br />
-              Mumbai, Maharashtra — 400050<br />
-              +91 98201 45678
-            </div>
-          </div>
-
-          {/* Payment — active */}
-          <div style={{ border: '1.5px solid var(--ink)', borderRadius: 'var(--r-md)', padding: 32 }}>
-            <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 20 }}>
-              <span style={{ width: 20, height: 20, borderRadius: 999, border: '1.5px solid var(--ink)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)', fontSize: 11 }}>3</span>
-              <span style={{ fontFamily: 'var(--serif)', fontSize: 22 }}>Payment method</span>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {[
-                { k: 'upi', t: 'UPI', s: 'GPay · PhonePe · Paytm · BHIM', icon: '⎈' },
-                { k: 'card', t: 'Credit / Debit card', s: 'Visa · Mastercard · RuPay · Amex', icon: '▭' },
-                { k: 'emi', t: 'No-cost EMI', s: 'From ₹14,166/mo · 24 months', icon: '※' },
-                { k: 'nb', t: 'Netbanking', s: 'All major banks', icon: '⏹' },
-                { k: 'cod', t: 'Cash on delivery', s: 'Available on orders under ₹50,000', icon: '₹', dis: true },
-              ].map(p => (
-                <label key={p.k} style={{
-                  display: 'flex', gap: 14, alignItems: 'center',
-                  padding: 16, borderRadius: 'var(--r-md)',
-                  border: payment === p.k ? '1.5px solid var(--ink)' : '1px solid var(--line)',
-                  background: payment === p.k ? 'var(--paper-2)' : 'var(--paper)',
-                  opacity: p.dis ? 0.4 : 1,
-                  cursor: p.dis ? 'not-allowed' : 'pointer',
-                }}>
-                  <input type="radio" name="pay" checked={payment === p.k} onChange={() => !p.dis && setPayment(p.k)} style={{ accentColor: 'var(--ink)' }} disabled={p.dis} />
-                  <span style={{ width: 32, height: 32, borderRadius: 6, background: 'var(--paper-3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16 }}>{p.icon}</span>
-                  <div style={{ flex: 1 }}>
-                    <div style={{ fontSize: 13, fontWeight: 500 }}>{p.t}</div>
-                    <div className="muted" style={{ fontSize: 12 }}>{p.s}</div>
-                  </div>
-                </label>
-              ))}
-            </div>
-
-            {payment === 'upi' && (
-              <div style={{ marginTop: 20, padding: 20, background: 'var(--paper-2)', borderRadius: 'var(--r-md)' }}>
-                <label className="label">UPI ID</label>
-                <div style={{ display: 'flex', gap: 8 }}>
-                  <input className="input" placeholder="name@bank" defaultValue="aditi@oksbi" />
-                  <button className="btn btn-primary">Verify</button>
-                </div>
-                <div className="muted" style={{ fontSize: 11, marginTop: 10 }}>You&apos;ll receive a request on your UPI app to approve the payment.</div>
-              </div>
-            )}
-
-            {payment === 'card' && (
-              <div style={{ marginTop: 20, padding: 20, background: 'var(--paper-2)', borderRadius: 'var(--r-md)', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <div style={{ gridColumn: '1/-1' }}>
-                  <label className="label">Card number</label>
-                  <input className="input" placeholder="1234 5678 9012 3456" />
-                </div>
-                <div><label className="label">Expiry</label><input className="input" placeholder="MM / YY" /></div>
-                <div><label className="label">CVV</label><input className="input" placeholder="•••" /></div>
-                <div style={{ gridColumn: '1/-1' }}><label className="label">Name on card</label><input className="input" placeholder="Aditi Rao" /></div>
-              </div>
-            )}
-
-            <button className="btn btn-primary btn-lg btn-block" style={{ marginTop: 24 }}>
-              Pay {formatINR(369960)} securely
-            </button>
-            <div className="muted" style={{ fontSize: 11, marginTop: 12, textAlign: 'center' }}>
-              By placing this order, you agree to PnP&apos;s Terms of Service &amp; Refund Policy.
-            </div>
-          </div>
+          <CheckoutClient
+            addresses={addresses.map(a => ({
+              id: a.id,
+              fullName: a.fullName,
+              phone: a.phone,
+              line1: a.line1,
+              line2: a.line2,
+              city: a.city,
+              state: a.state,
+              pincode: a.pincode,
+              isDefault: a.isDefault,
+            }))}
+            totalPaise={totalPaise}
+            userEmail={user.email}
+          />
         </div>
 
         {/* Summary */}
-        <aside style={{ position: 'sticky', top: 100, alignSelf: 'start' }}>
+        <aside className="checkout-summary-sticky" style={{ top: 100 }}>
           <div style={{ background: 'var(--paper-2)', borderRadius: 'var(--r-lg)', padding: 28 }}>
             <h3 style={{ fontSize: 18, marginBottom: 16 }}>Your order</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginBottom: 20 }}>
-              {products.slice(0, 2).map(p => (
-                <div key={p.id} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-                  <div style={{ width: 56, height: 56, background: 'var(--paper)', borderRadius: 'var(--r-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', flexShrink: 0 }}>
-                    <CameraArt tone="dark" variant={p.category === 'Lenses' ? 'lens' : 'body'} />
-                    <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--ink)', color: 'var(--paper)', borderRadius: 999, width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)' }}>1</span>
+              {items.map(it => {
+                const img = it.product.images[0];
+                return (
+                  <div key={it.id} style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                    <div style={{ width: 56, height: 56, background: 'var(--paper)', borderRadius: 'var(--r-sm)', position: 'relative', flexShrink: 0, overflow: 'hidden' }}>
+                      {img && <ProductImage src={productImageSrc(img.storagePath)} alt={img.alt} sizes="56px" />}
+                      <span style={{ position: 'absolute', top: -6, right: -6, background: 'var(--ink)', color: 'var(--paper)', borderRadius: 999, width: 18, height: 18, fontSize: 10, display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'var(--mono)' }}>
+                        {it.qty}
+                      </span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.product.name}</div>
+                      <div className="muted" style={{ fontSize: 11 }}>{it.product.category.name}</div>
+                    </div>
+                    <div style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>
+                      {formatINR(Math.round((it.priceAtAddPaise * it.qty) / 100))}
+                    </div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{p.name}</div>
-                    <div className="muted" style={{ fontSize: 11 }}>{p.category}</div>
-                  </div>
-                  <div style={{ fontSize: 12, fontVariantNumeric: 'tabular-nums' }}>{formatINR(p.price)}</div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <hr className="hr" />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '16px 0', fontSize: 13 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Subtotal</span><span>{formatINR(559980)}</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">Shipping</span><span>Free</span></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}><span className="muted">GST (included)</span><span>{formatINR(85420)}</span></div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="muted">Subtotal</span>
+                <span>{formatINR(Math.round(subtotalPaise / 100))}</span>
+              </div>
+              {coupon && (
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span className="muted">Coupon ({coupon.code})</span>
+                  <span style={{ color: 'var(--ok)' }}>−{formatINR(Math.round(discountPaise / 100))}</span>
+                </div>
+              )}
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="muted">Shipping</span>
+                <span>{shippingPaise === 0 ? 'Free' : formatINR(Math.round(shippingPaise / 100))}</span>
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <span className="muted">GST</span>
+                <span className="muted">Included</span>
+              </div>
             </div>
             <hr className="hr" />
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 16 }}>
               <span style={{ fontSize: 13 }}>Total</span>
-              <span style={{ fontSize: 24, fontFamily: 'var(--serif)' }}>{formatINR(559980)}</span>
-            </div>
-          </div>
-          <div style={{ display: 'flex', gap: 12, marginTop: 20, padding: 16, background: 'var(--paper)', border: '1px solid var(--line)', borderRadius: 'var(--r-md)' }}>
-            <span style={{ color: 'var(--accent)' }}>{Icons.truck}</span>
-            <div style={{ fontSize: 12 }}>
-              <div style={{ fontWeight: 500 }}>Delivery by Mon, 28 Apr</div>
-              <div className="muted">Bluedart · signature required</div>
+              <span style={{ fontSize: 24, fontFamily: 'var(--serif)' }}>
+                {formatINR(Math.round(totalPaise / 100))}
+              </span>
             </div>
           </div>
         </aside>

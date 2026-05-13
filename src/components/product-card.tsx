@@ -1,38 +1,28 @@
 'use client';
 
-import { CameraArt } from './camera-art';
-import { Icons } from './icons';
+import { ProductImage } from './product-image';
+import { WishlistButton } from './wishlist-button';
 import { Product, formatINR } from '@/lib/data';
 
 interface ProductCardProps {
   product: Product;
-  onClick?: () => void;
-  onWish?: () => void;
-  wished?: boolean;
   size?: 'sm' | 'md';
+  initialWished?: boolean;
 }
 
-export function ProductCard({ product, onClick, onWish, wished = false, size = 'md' }: ProductCardProps) {
-  const variant = product.category === 'Lenses' ? 'lens'
-    : product.category === 'Flashes' ? 'flash' : 'body';
+export function ProductCard({ product, size = 'md', initialWished = false }: ProductCardProps) {
   return (
-    <div className="card" onClick={onClick} style={{ cursor: 'pointer' }}>
+    <div className="card">
       <div className="card-media">
         <div className="card-media-inner">
-          <CameraArt tone="dark" variant={variant} />
+          <ProductImage src={product.image} alt={product.imageAlt} />
         </div>
         {product.badge && (
           <div style={{ position: 'absolute', top: 12, left: 12 }}>
             <span className="badge soft">{product.badge}</span>
           </div>
         )}
-        <button
-          className={'card-wish' + (wished ? ' on' : '')}
-          onClick={(e) => { e.stopPropagation(); onWish?.(); }}
-          style={{ color: wished ? 'var(--accent)' : 'var(--ink)' }}
-        >
-          {Icons.heart}
-        </button>
+        <WishlistButton slug={product.id} initialWished={initialWished} variant="card" />
       </div>
       <div style={{ paddingTop: 14 }}>
         <div className="mono muted" style={{ fontSize: 10, letterSpacing: '0.1em', textTransform: 'uppercase', marginBottom: 4 }}>

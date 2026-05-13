@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { useEffect, useState } from 'react';
 import { Icons } from './icons';
 import { Wordmark } from './wordmark';
 
@@ -11,19 +12,47 @@ const iconBtn: React.CSSProperties = {
   cursor: 'pointer',
 };
 
+const TICKER_ITEMS = [
+  'Authorized Canon Image Square · Est. 1998',
+  'EMI from 0%',
+  'Pan India delivery',
+  'Use welcome10 for 10% off on your first order',
+];
+
 function TopStrip() {
+  const items = [...TICKER_ITEMS, ...TICKER_ITEMS];
   return (
     <div style={{
       background: 'var(--ink)', color: 'var(--paper)',
-      fontSize: 11, padding: '8px 24px',
-      display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      fontSize: 11, height: 34, overflow: 'hidden',
       fontFamily: 'var(--mono)', letterSpacing: '0.08em', textTransform: 'uppercase',
+      display: 'flex', alignItems: 'center',
     }}>
-      <span>Authorized Canon Image Square · Est. 1998</span>
-      <div style={{ display: 'flex', gap: 20 }}>
-        <span>Free shipping above ₹5,000</span>
-        <span>EMI from 0%</span>
-        <span>Track order</span>
+      <style>{`
+        @keyframes pnp-ticker {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+        .pnp-ticker-track {
+          display: flex;
+          align-items: center;
+          width: max-content;
+          animation: pnp-ticker 28s linear infinite;
+          will-change: transform;
+        }
+        .pnp-ticker-track:hover { animation-play-state: paused; }
+        .pnp-ticker-sep {
+          margin: 0 20px;
+          opacity: 0.35;
+        }
+      `}</style>
+      <div className="pnp-ticker-track">
+        {items.map((item, i) => (
+          <span key={i} style={{ whiteSpace: 'nowrap', display: 'flex', alignItems: 'center' }}>
+            {item}
+            <span className="pnp-ticker-sep">◆</span>
+          </span>
+        ))}
       </div>
     </div>
   );
@@ -38,16 +67,16 @@ export function Nav({ cartCount = 2, compact = false }: NavProps) {
   const links = ['Cameras', 'Lenses', 'Printers', 'Accessories', 'Used Gear', 'Workshops', 'Service'];
   return (
     <>
+      <div style={{ position: 'sticky', top: 0, zIndex: 20 }}>
       {!compact && <TopStrip />}
       <header style={{
-        position: 'sticky', top: 0, zIndex: 20,
         background: 'rgba(250,249,246,0.9)',
         backdropFilter: 'blur(14px)',
         borderBottom: '1px solid var(--line)',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', padding: '18px 32px', gap: 32 }}>
+        <div className="pnp-px" style={{ display: 'flex', alignItems: 'center', padding: '18px 0', gap: 32 }}>
           <Link href="/" style={{ flexShrink: 0 }}><Wordmark size={20} /></Link>
-          <nav style={{ display: 'flex', gap: 28, flex: 1, marginLeft: 16 }}>
+          <nav className="hide-mobile" style={{ display: 'flex', gap: 28, flex: 1, marginLeft: 16 }}>
             {links.map(l => (
               <Link key={l} href={l === 'Cameras' ? '/cameras' : '#'} style={{
                 fontSize: 13, color: 'var(--ink-2)',
@@ -58,7 +87,7 @@ export function Nav({ cartCount = 2, compact = false }: NavProps) {
               </Link>
             ))}
           </nav>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginLeft: 'auto' }}>
             <Link href="/search" style={iconBtn}>{Icons.search}</Link>
             <Link href="/account" style={iconBtn}>{Icons.user}</Link>
             <button style={iconBtn}>{Icons.heart}</button>
@@ -78,37 +107,191 @@ export function Nav({ cartCount = 2, compact = false }: NavProps) {
           </div>
         </div>
       </header>
+      </div>
     </>
   );
 }
 
-export function MobileNav({ cartCount = 2 }: { cartCount?: number }) {
+export function SiteNav({ cartCount = 2, compact = false }: NavProps) {
   return (
-    <header style={{
-      position: 'sticky', top: 0, zIndex: 20,
-      background: 'rgba(250,249,246,0.92)',
-      backdropFilter: 'blur(14px)',
-      borderBottom: '1px solid var(--line)',
-      padding: '12px 16px',
-      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-    }}>
-      <button style={{ ...iconBtn, width: 36, height: 36 }}>{Icons.menu}</button>
-      <Wordmark size={16} />
-      <div style={{ display: 'flex', gap: 2 }}>
-        <Link href="/search" style={{ ...iconBtn, width: 36, height: 36 }}>{Icons.search}</Link>
-        <Link href="/cart" style={{ ...iconBtn, width: 36, height: 36, position: 'relative' }}>
-          {Icons.bag}
-          {cartCount > 0 && (
-            <span style={{
-              position: 'absolute', top: 2, right: 2,
-              background: 'var(--accent)', color: 'var(--paper)',
-              borderRadius: 999, minWidth: 14, height: 14,
-              fontSize: 9, fontFamily: 'var(--mono)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
-            }}>{cartCount}</span>
-          )}
-        </Link>
-      </div>
-    </header>
+    <>
+      <div className="sitenav-desktop"><Nav cartCount={cartCount} compact={compact} /></div>
+      <div className="sitenav-mobile"><MobileNav cartCount={cartCount} /></div>
+    </>
+  );
+}
+
+const MOBILE_DRAWER_LINKS: Array<{ label: string; href: string }> = [
+  { label: 'All cameras', href: '/cameras' },
+  { label: 'Mirrorless', href: '/cameras?category=mirrorless' },
+  { label: 'DSLR', href: '/cameras?category=dslr' },
+  { label: 'Lenses', href: '/cameras?category=lenses' },
+  { label: 'Printers', href: '/cameras?category=printers' },
+  { label: 'Accessories', href: '/cameras?category=accessories' },
+];
+
+const MOBILE_DRAWER_ACCOUNT: Array<{ label: string; href: string }> = [
+  { label: 'My account', href: '/account' },
+  { label: 'Orders', href: '/account/orders' },
+  { label: 'Wishlist', href: '/account/wishlist' },
+  { label: 'Addresses', href: '/account/addresses' },
+];
+
+export function MobileNav({ cartCount = 2 }: { cartCount?: number }) {
+  const [open, setOpen] = useState(false);
+
+  // Close on Escape + lock body scroll while drawer is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    document.addEventListener('keydown', onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      document.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [open]);
+
+  return (
+    <>
+      <header style={{
+        position: 'sticky', top: 0, zIndex: 20,
+        background: 'rgba(250,249,246,0.92)',
+        backdropFilter: 'blur(14px)',
+        borderBottom: '1px solid var(--line)',
+        padding: '12px 16px',
+        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+      }}>
+        <button
+          type="button"
+          aria-label="Open menu"
+          aria-expanded={open}
+          onClick={() => setOpen(true)}
+          style={{ ...iconBtn, width: 36, height: 36 }}
+        >
+          {Icons.menu}
+        </button>
+        <Wordmark size={16} />
+        <div style={{ display: 'flex', gap: 2 }}>
+          <Link href="/search" style={{ ...iconBtn, width: 36, height: 36 }}>{Icons.search}</Link>
+          <Link href="/cart" style={{ ...iconBtn, width: 36, height: 36, position: 'relative' }}>
+            {Icons.bag}
+            {cartCount > 0 && (
+              <span style={{
+                position: 'absolute', top: 2, right: 2,
+                background: 'var(--accent)', color: 'var(--paper)',
+                borderRadius: 999, minWidth: 14, height: 14,
+                fontSize: 9, fontFamily: 'var(--mono)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '0 3px',
+              }}>{cartCount}</span>
+            )}
+          </Link>
+        </div>
+      </header>
+
+      {/* Drawer + backdrop */}
+      <div
+        aria-hidden={!open}
+        onClick={() => setOpen(false)}
+        style={{
+          position: 'fixed', inset: 0, zIndex: 50,
+          background: 'rgba(20,18,16,0.45)',
+          opacity: open ? 1 : 0,
+          pointerEvents: open ? 'auto' : 'none',
+          transition: 'opacity 200ms ease',
+        }}
+      />
+      <aside
+        role="dialog"
+        aria-label="Menu"
+        aria-hidden={!open}
+        style={{
+          position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 51,
+          width: 'min(86vw, 360px)',
+          background: 'var(--paper)',
+          borderRight: '1px solid var(--line)',
+          transform: open ? 'translateX(0)' : 'translateX(-100%)',
+          transition: 'transform 240ms cubic-bezier(.2,.7,.2,1)',
+          display: 'flex', flexDirection: 'column',
+          overflowY: 'auto',
+        }}
+      >
+        <div style={{
+          display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '14px 16px', borderBottom: '1px solid var(--line)',
+        }}>
+          <Wordmark size={16} />
+          <button
+            type="button"
+            aria-label="Close menu"
+            onClick={() => setOpen(false)}
+            style={{ ...iconBtn, width: 36, height: 36 }}
+          >
+            {Icons.close}
+          </button>
+        </div>
+
+        <nav style={{ padding: '20px 8px 8px', display: 'flex', flexDirection: 'column' }}>
+          <div className="mono" style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)', padding: '0 12px 12px' }}>
+            Shop
+          </div>
+          {MOBILE_DRAWER_LINKS.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              style={{
+                padding: '14px 12px',
+                fontSize: 16, fontFamily: 'var(--serif)',
+                color: 'var(--ink)',
+                borderRadius: 'var(--r-md)',
+              }}
+            >
+              {l.label}
+            </Link>
+          ))}
+
+          <div className="mono" style={{ fontSize: 10, letterSpacing: '0.14em', textTransform: 'uppercase', color: 'var(--ink-3)', padding: '20px 12px 12px' }}>
+            Account
+          </div>
+          {MOBILE_DRAWER_ACCOUNT.map((l) => (
+            <Link
+              key={l.href}
+              href={l.href}
+              onClick={() => setOpen(false)}
+              style={{
+                padding: '12px 12px',
+                fontSize: 14,
+                color: 'var(--ink-2)',
+                borderRadius: 'var(--r-md)',
+              }}
+            >
+              {l.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div style={{ marginTop: 'auto', padding: 16, borderTop: '1px solid var(--line)', display: 'flex', gap: 12 }}>
+          <Link
+            href="/cart"
+            onClick={() => setOpen(false)}
+            className="btn btn-primary btn-sm"
+            style={{ flex: 1 }}
+          >
+            View cart{cartCount > 0 ? ` (${cartCount})` : ''}
+          </Link>
+          <Link
+            href="/login"
+            onClick={() => setOpen(false)}
+            className="btn btn-ghost btn-sm"
+          >
+            Sign in
+          </Link>
+        </div>
+      </aside>
+    </>
   );
 }
