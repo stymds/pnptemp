@@ -333,3 +333,6 @@ a { color: inherit; text-decoration: none; }
 
 /* Rating stars */
 .stars { display: inline-flex; gap: 2px; color: var(--accent); }
+
+/* Genre tile image zoom on hover */
+a:hover .genre-tile-img { transform: scale(1.05); }

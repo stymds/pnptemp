@@ -14,7 +14,18 @@
       "Bash(npx tsx *)",
       "Bash(npm run *)",
       "Bash(grep -nE \"\\(gridTemplateColumns|width:\\\\s*['\\\\\"]?[0-9]{3,}\\)\" src/components/footer.tsx src/components/nav.tsx)",
-      "Bash(grep -rn \"minWidth:\\\\s*[0-9]\\\\{3,\\\\}\\\\|width:\\\\s*[0-9]\\\\{3,\\\\}px\" src/app/)"
+      "Bash(grep -rn \"minWidth:\\\\s*[0-9]\\\\{3,\\\\}\\\\|width:\\\\s*[0-9]\\\\{3,\\\\}px\" src/app/)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Projects\\\\pnp\\\\src\\\\components\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object Name)",
+      "Bash(Get-ChildItem *)",
+      "WebSearch",
+      "WebFetch(domain:unsplash.com)",
+      "Bash(mkdir -p D:/Projects/pnp/public/images/genres)",
+      "Bash(curl -sL \"https://images.unsplash.com/photo-1508817628294-5a453fa0b8fb?w=800&h=1000&fit=crop&q=85&auto=format\" -o wildlife.jpg)",
+      "Bash(curl -sL \"https://images.unsplash.com/photo-1743360543515-d3b506e6d3c2?w=800&h=1000&fit=crop&q=85&auto=format\" -o street.jpg)",
+      "Bash(curl -sL \"https://images.unsplash.com/photo-1595404841770-6b57d7e29203?w=800&h=1000&fit=crop&q=85&auto=format\" -o portrait.jpg)",
+      "Bash(curl -sL \"https://images.unsplash.com/photo-1507915977619-6ccfe8003ae6?w=800&h=1000&fit=crop&q=85&auto=format\" -o wedding.jpg)",
+      "Bash(node *)"
     ]
   }
 }

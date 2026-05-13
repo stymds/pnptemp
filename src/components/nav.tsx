@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Icons } from './icons';
 import { Wordmark } from './wordmark';
 
@@ -64,18 +64,52 @@ interface NavProps {
 }
 
 export function Nav({ cartCount = 2, compact = false }: NavProps) {
+  const [tickerVisible, setTickerVisible] = useState(true);
+  const lastScrollY = useRef(0);
+  const locked = useRef(false);
+
+  useEffect(() => {
+    const handler = () => {
+      if (locked.current) return;
+      const y = window.scrollY;
+      if (y > lastScrollY.current && y > 60) {
+        setTickerVisible(false);
+        locked.current = true;
+        setTimeout(() => {
+          locked.current = false;
+          lastScrollY.current = window.scrollY;
+        }, 350);
+      } else if (y < lastScrollY.current) {
+        setTickerVisible(true);
+        locked.current = true;
+        setTimeout(() => {
+          locked.current = false;
+          lastScrollY.current = window.scrollY;
+        }, 350);
+      } else {
+        lastScrollY.current = y;
+      }
+    };
+    window.addEventListener('scroll', handler, { passive: true });
+    return () => window.removeEventListener('scroll', handler);
+  }, []);
+
   const links = ['Cameras', 'Lenses', 'Printers', 'Accessories', 'Used Gear', 'Workshops', 'Service'];
   return (
     <>
       <div style={{ position: 'sticky', top: 0, zIndex: 20 }}>
-      {!compact && <TopStrip />}
+      {!compact && (
+        <div style={{ overflow: 'hidden', maxHeight: tickerVisible ? 34 : 0, transition: 'max-height 0.3s ease' }}>
+          <TopStrip />
+        </div>
+      )}
       <header style={{
         background: 'rgba(250,249,246,0.9)',
         backdropFilter: 'blur(14px)',
         borderBottom: '1px solid var(--line)',
       }}>
-        <div className="pnp-px" style={{ display: 'flex', alignItems: 'center', padding: '18px 0', gap: 32 }}>
-          <Link href="/" style={{ flexShrink: 0 }}><Wordmark size={20} /></Link>
+        <div className="pnp-px" style={{ display: 'flex', alignItems: 'center', paddingTop: 16, paddingBottom: 16, gap: 32 }}>
+          <Link href="/" style={{ flexShrink: 0 }}><Wordmark size={24} /></Link>
           <nav className="hide-mobile" style={{ display: 'flex', gap: 28, flex: 1, marginLeft: 16 }}>
             {links.map(l => (
               <Link key={l} href={l === 'Cameras' ? '/cameras' : '#'} style={{
